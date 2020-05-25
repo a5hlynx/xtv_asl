@@ -1,0 +1,6 @@
+EXPORTS
+XT_Init
+XT_About
+XT_Done
+XT_View
+XT_ReleaseMem
