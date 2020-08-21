@@ -32,7 +32,7 @@
 #define VER_BUF_LEN 10
 
 int xwf_version = 0;
-const wchar_t* XT_VER = L"XTV_ASL - v1.0.0";
+const wchar_t* XT_VER = L"XTV_ASL - v1.0.1";
 
 WCHAR case_name[NAME_BUF_LEN] = { 0 };
 wchar_t msg[MSG_BUF_LEN];
@@ -72,12 +72,15 @@ std::string shift_jisfy(std::string src) {
 
 	int w_len = MultiByteToWideChar(CP_UTF8, 0, src.c_str(), (int)(src.size() + 1), NULL, 0);
 	wchar_t* w_buf = (wchar_t*)HeapAlloc(heap, HEAP_ZERO_MEMORY, sizeof(wchar_t) * w_len);
+	if (w_buf == 0)
+		return "";
 
 	MultiByteToWideChar(CP_UTF8, 0, src.c_str(), (int)(src.size() + 1), w_buf, w_len);
 
 	int len = WideCharToMultiByte(CP_THREAD_ACP, 0, w_buf, -1, NULL, 0, NULL, NULL);
 	char* buf = (char*)HeapAlloc(heap, HEAP_ZERO_MEMORY, sizeof(char) * len);
-
+	if (buf == 0)
+		return "";
 	WideCharToMultiByte(CP_THREAD_ACP, 0, w_buf, w_len + 1, buf, len, NULL, NULL);
 	std::string dst(buf);
 
@@ -195,6 +198,9 @@ int serialize_asl_string(struct c_buf* sbuf, struct c_buf* dbuf, const char* del
 	}
 	else {
 		offset = get_int64(sbuf);
+		if (offset > sbuf->len) {
+			return -1;
+		}
 		if ((sbuf->ptr + offset)[0] != 0x00 || (sbuf->ptr + offset)[1] != 0x01) {
 			return -1;
 		}
@@ -202,6 +208,8 @@ int serialize_asl_string(struct c_buf* sbuf, struct c_buf* dbuf, const char* del
 		sbuf->offset = offset;
 		len = get_int32(sbuf);
 		char* buf = (char*)HeapAlloc(heap, HEAP_ZERO_MEMORY, sizeof(char) * len);
+		if (buf == 0)
+			return -1;
 		memcpy_s(buf, len / sizeof(buf[0]), sbuf->ptr + sbuf->offset, len / sizeof(buf[0]));
 		val = (char*)buf;
 		HeapFree(heap, 0, buf);
@@ -296,6 +304,8 @@ int serialize_level(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = 
 	int ret = 0;
 	unsigned _int16 val = get_int16(sbuf);
 	char* level = (char*)HeapAlloc(heap, HEAP_ZERO_MEMORY, sizeof(char) * 10);
+	if (level == 0)
+		return -1;
 
 	switch (val) {
 	case 0:
@@ -343,7 +353,7 @@ int serialize_kvs(struct c_buf* sbuf, struct c_buf* dbuf, unsigned __int32 kv_co
 		if (serialize_asl_string(sbuf, dbuf, "=") != 0)
 			return -1;
 		if ((i + 1) == (kv_count) / 2) {
-			if (serialize_asl_string(sbuf, dbuf, "\n") != 0)
+			if (serialize_asl_string(sbuf, dbuf, "") != 0)
 				return -1;
 		}
 		else {
@@ -442,6 +452,9 @@ LONG get_serialized_asl_record(struct c_buf* sbuf, struct c_buf* dbuf, struct os
 	/* kvs */
 	if (serialize_kvs(sbuf, dbuf, kv_count) != 0)
 		return -1;
+
+	/* lb */
+	dbuf->offset += snprintf((char*)(dbuf->ptr + dbuf->offset), dbuf->len * sizeof(char), "\n");
 
 	dbuf->len = dbuf->offset;
 
@@ -568,11 +581,7 @@ void* __stdcall XT_View(HANDLE hItem, LONG nItemID, HANDLE hVolume, HANDLE hEvid
 
 	if (actual_size == (sbuf.len * sizeof(char))) {
 		if (get_serialized_asl_records(&sbuf, &dbuf) != 0) {
-			XWF_OutputMessage(L"XTV_ASL: Might be Corrupted.", 0);
-			HeapFree(heap, 0, sbuf.ptr);
-			HeapFree(heap, 0, dbuf.ptr);
-			*lpResSize = -1;
-			return NULL;
+			XWF_OutputMessage(L"XTV_ASL: Might be Corrupted or Malformed.", 0);
 		}
 	}
 	else {
