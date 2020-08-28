@@ -367,7 +367,6 @@ int serialize_kvs(struct c_buf* sbuf, struct c_buf* dbuf, unsigned __int32 kv_co
 
 LONG get_serialized_asl_record(struct c_buf* sbuf, struct c_buf* dbuf, struct os_pair* osp) {
 
-	unsigned __int32 rec_len = 0;
 	unsigned __int64 offset = 0;
 	unsigned __int32 kv_count = 0;
 
@@ -379,8 +378,13 @@ LONG get_serialized_asl_record(struct c_buf* sbuf, struct c_buf* dbuf, struct os
 		}
 		sbuf->offset++;
 	}
-	rec_len = get_int32(sbuf);
-	osp->next_offset = get_int64(sbuf);
+	/* rec_len */
+	if (get_int32(sbuf) == 0)
+		return -1;
+
+	/* offset to next rec */
+	if ((osp->next_offset = get_int64(sbuf)) == 0)
+		return -1;
 
 	/* numeric_id */
 	if (serialize_int64(sbuf, dbuf) != 0)
