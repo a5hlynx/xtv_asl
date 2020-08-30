@@ -42,7 +42,7 @@ BOOLEAN EXIT = FALSE;
 HANDLE heap = NULL;
 unsigned __int64 h_ext = 1000;
 const char* dlm = ",";
-
+const char* pre = "(";
 
 struct c_buf {
 	char* ptr = 0;
@@ -180,7 +180,7 @@ std::string rmv(std::string str) {
 }
 
 
-int serialize_asl_string(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = dlm) {
+int serialize_asl_string(struct c_buf* sbuf, struct c_buf* dbuf, const char* pre = "", const char* post = "") {
 
 	std::string val, s_val;
 	unsigned __int64 len = 0;
@@ -217,14 +217,14 @@ int serialize_asl_string(struct c_buf* sbuf, struct c_buf* dbuf, const char* del
 
 	val = rmv(val);
 	s_val = shift_jisfy(val);
-	len = (unsigned __int64)s_val.length();
-	while ((dbuf->offset + sizeof(char) * len + sizeof(char) * 2) > dbuf->len) {
-		if (extend_heap(dbuf, (sizeof(char) * len + sizeof(char) * 2)) != 0) {
+	len = (unsigned __int64)s_val.length() + strlen(pre) +  strlen(post); 
+	while ((dbuf->offset + sizeof(char) * len + sizeof(char)) > dbuf->len) {
+		if (extend_heap(dbuf, (sizeof(char) * len + sizeof(char))) != 0) {
 			return -1;
 		}
 	}
 	sbuf->offset = current_pos + 8;
-	dbuf->offset += snprintf((char*)(dbuf->ptr + dbuf->offset), dbuf->len * sizeof(char), "%s%s", s_val.c_str(), delim);
+	dbuf->offset += snprintf((char*)(dbuf->ptr + dbuf->offset), dbuf->len * sizeof(char), "%s%s%s", pre, s_val.c_str(), post);
 
 
 	return 0;
@@ -350,14 +350,19 @@ int serialize_level(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = 
 int serialize_kvs(struct c_buf* sbuf, struct c_buf* dbuf, unsigned __int32 kv_count, const char* delim = dlm) {
 
 	for (unsigned __int32 i = 0; i < kv_count / 2; i++) {
-		if (serialize_asl_string(sbuf, dbuf, "=") != 0)
-			return -1;
+		if (i == 0) {
+			if (serialize_asl_string(sbuf, dbuf, "\"(", "") != 0)
+				return -1;
+		} else {
+			if (serialize_asl_string(sbuf, dbuf, "(", "=") != 0)
+				return -1;
+		}
 		if ((i + 1) == (kv_count) / 2) {
-			if (serialize_asl_string(sbuf, dbuf, "") != 0)
+			if (serialize_asl_string(sbuf, dbuf, "", ")\"") != 0)
 				return -1;
 		}
 		else {
-			if (serialize_asl_string(sbuf, dbuf) != 0)
+			if (serialize_asl_string(sbuf, dbuf, "", ")") != 0)
 				return -1;
 		}
 	}
@@ -431,27 +436,27 @@ LONG get_serialized_asl_record(struct c_buf* sbuf, struct c_buf* dbuf, struct os
 	kv_count = get_int32(sbuf);
 
 	/* host */
-	if (serialize_asl_string(sbuf, dbuf) != 0)
+	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
 		return -1;
 
 	/* proc */
-	if (serialize_asl_string(sbuf, dbuf) != 0)
+	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
 		return -1;
 
 	/* facility */
-	if (serialize_asl_string(sbuf, dbuf) != 0)
+	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
 		return -1;
 
 	/* msg */
-	if (serialize_asl_string(sbuf, dbuf) != 0)
+	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
 		return -1;
 
 	/* ref_proc */
-	if (serialize_asl_string(sbuf, dbuf) != 0)
+	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
 		return -1;
 
 	/* session */
-	if (serialize_asl_string(sbuf, dbuf) != 0)
+	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
 		return -1;
 
 	/* kvs */
