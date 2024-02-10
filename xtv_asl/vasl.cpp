@@ -1,6 +1,6 @@
 /*
 	ASL Viewer X-Tension
-	Copyright (C) 2020 Yuya Hashimoto
+	Copyright (C) 2024 Yuya Hashimoto
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,7 @@
 #define VER_BUF_LEN 10
 
 int xwf_version = 0;
-const wchar_t* XT_VER = L"XTV_ASL - v1.0.1";
+const wchar_t* XT_VER = L"XTV_ASL - v1.0.2";
 
 WCHAR case_name[NAME_BUF_LEN] = { 0 };
 wchar_t msg[MSG_BUF_LEN];
@@ -41,8 +41,9 @@ wchar_t VER[VER_BUF_LEN];
 BOOLEAN EXIT = FALSE;
 HANDLE heap = NULL;
 unsigned __int64 h_ext = 1000;
-const char* dlm = ",";
-const char* pre = "(";
+const char* _dlm = "\t";
+const char* _quot = "\"";
+const char* _quot_dlm = "\"\t";
 
 struct c_buf {
 	char* ptr = 0;
@@ -231,7 +232,7 @@ int serialize_asl_string(struct c_buf* sbuf, struct c_buf* dbuf, const char* pre
 
 }
 
-int serialize_timestamp(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = dlm) {
+int serialize_timestamp(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = _dlm) {
 
 	struct tm t;
 	time_t epoch = get_int64(sbuf);
@@ -244,7 +245,7 @@ int serialize_timestamp(struct c_buf* sbuf, struct c_buf* dbuf, const char* deli
 	localtime_s(&t, &epoch);
 	dbuf->offset += snprintf((char*)(dbuf->ptr + dbuf->offset),
 		dbuf->len * sizeof(char),
-		"%d/%02d/%02d %02d:%02d:%02d.%09d%s",
+		"%d-%02d-%02d %02d:%02d:%02d.%09d%s",
 		t.tm_year + 1900,
 		t.tm_mon + 1,
 		t.tm_mday,
@@ -258,7 +259,7 @@ int serialize_timestamp(struct c_buf* sbuf, struct c_buf* dbuf, const char* deli
 }
 
 
-int serialize_int64(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = dlm) {
+int serialize_int64(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = _dlm) {
 
 	int ret = 0;
 	unsigned _int64 val = get_int64(sbuf);
@@ -271,7 +272,7 @@ int serialize_int64(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = 
 	return 0;
 }
 
-int serialize_int32(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = dlm) {
+int serialize_int32(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = _dlm) {
 
 	int ret = 0;
 	unsigned _int32 val = get_int32(sbuf);
@@ -285,7 +286,7 @@ int serialize_int32(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = 
 }
 
 
-int serialize_int16(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = dlm) {
+int serialize_int16(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = _dlm) {
 
 	int ret = 0;
 	unsigned _int16 val = get_int16(sbuf);
@@ -299,7 +300,7 @@ int serialize_int16(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = 
 
 }
 
-int serialize_level(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = dlm) {
+int serialize_level(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = _dlm) {
 
 	int ret = 0;
 	unsigned _int16 val = get_int16(sbuf);
@@ -347,22 +348,23 @@ int serialize_level(struct c_buf* sbuf, struct c_buf* dbuf, const char* delim = 
 	return 0;
 }
 
-int serialize_kvs(struct c_buf* sbuf, struct c_buf* dbuf, unsigned __int32 kv_count, const char* delim = dlm) {
+int serialize_kvs(struct c_buf* sbuf, struct c_buf* dbuf, unsigned __int32 kv_count, const char* delim = "") {
 
 	for (unsigned __int32 i = 0; i < kv_count / 2; i++) {
 		if (i == 0) {
-			if (serialize_asl_string(sbuf, dbuf, "\"(", "") != 0)
-				return -1;
-		} else {
-			if (serialize_asl_string(sbuf, dbuf, "(", "=") != 0)
-				return -1;
-		}
-		if ((i + 1) == (kv_count) / 2) {
-			if (serialize_asl_string(sbuf, dbuf, "", ")\"") != 0)
+			if (serialize_asl_string(sbuf, dbuf, "{\"", "\":") != 0)
 				return -1;
 		}
 		else {
-			if (serialize_asl_string(sbuf, dbuf, "", ")") != 0)
+			if (serialize_asl_string(sbuf, dbuf, "\"", "\":") != 0)
+				return -1;
+		}
+		if ((i + 1) == (kv_count) / 2) {
+			if (serialize_asl_string(sbuf, dbuf, "\"", "\"}") != 0)
+				return -1;
+		}
+		else {
+			if (serialize_asl_string(sbuf, dbuf, "\"", "\", ") != 0)
 				return -1;
 		}
 	}
@@ -436,27 +438,27 @@ LONG get_serialized_asl_record(struct c_buf* sbuf, struct c_buf* dbuf, struct os
 	kv_count = get_int32(sbuf);
 
 	/* host */
-	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
+	if (serialize_asl_string(sbuf, dbuf, _quot, _quot_dlm) != 0)
 		return -1;
 
 	/* proc */
-	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
+	if (serialize_asl_string(sbuf, dbuf, _quot, _quot_dlm) != 0)
 		return -1;
 
 	/* facility */
-	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
+	if (serialize_asl_string(sbuf, dbuf, _quot, _quot_dlm) != 0)
 		return -1;
 
 	/* msg */
-	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
+	if (serialize_asl_string(sbuf, dbuf, _quot, _quot_dlm) != 0)
 		return -1;
 
 	/* ref_proc */
-	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
+	if (serialize_asl_string(sbuf, dbuf, _quot, _quot_dlm) != 0)
 		return -1;
 
 	/* session */
-	if (serialize_asl_string(sbuf, dbuf, "\"", "\",") != 0)
+	if (serialize_asl_string(sbuf, dbuf, _quot, _quot_dlm) != 0)
 		return -1;
 
 	/* kvs */

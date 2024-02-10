@@ -14,8 +14,8 @@ The dll for both x86 and x64 already build are also available at the [release](h
 
 ## Usage
 * Load
-  1. Click "Viewer Programs..." in "Options" from the Menu bar.
-  2. Check "Load viewer X-Tensions" and click "..." in the "Viewer Programs, Gallery" Window.
+  1. Click "File Viewing..." in "Options" from the Menu bar.
+  2. Check "Load viewer X-Tensions" and click "..." in the "File Viewing" Window.
   3. Select xtv_asl.dll in the "Load Viewer X-Tensions" Window.
 * Parse & Preview
   1. Select the Apple System Log in the Directory Browser.
@@ -23,7 +23,7 @@ The dll for both x86 and x64 already build are also available at the [release](h
   3. Click the XT tab to show the parsed data. XT tab switches raw and parsed.
 
 ## Requirements
-xtv_asl.dll is confirmed to work with X-Ways Forensics 19.9 installed on x64 Windows 10.
+xtv_asl.dll is confirmed to work with X-Ways Forensics 21.0 installed on x64 Windows 10.
 
 ## License
 GNU Affero General Public License v3.0.
