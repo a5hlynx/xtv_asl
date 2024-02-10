@@ -1,10 +1,10 @@
 # ASL Viewer X-Tension
 
-A Viewer X-Tension for X-Ways Forensics, which parses and previews the selected Apple System Log(asl).
+A Viewer X-Tension for X-Ways Forensics, which parses and previews the selected Apple System Log (asl).
 
 ## Build
 
-Open xtv_asl.sln and Build solution for the desired platform. xtv_asl.dll will be created at the path below. The solution is confirmed to be built by Visual Studio 2019.
+Open xtv_asl.sln and Build solution for the desired platform. xtv_asl.dll will be created at the path below. The solution is confirmed to be built by Visual Studio 2022.
 * x86
   * xtv_asl\Release\xtv_asl.dll
 * x64
